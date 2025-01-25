@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "GPT Code Downloader",
+  "version": "1.0",
+  "description": "从 GPT 回复中提取代码并按文件名下载",
+  "permissions": [
+    "downloads",
+    "activeTab",
+    "scripting",
+    "management",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://poe.com/*",
+    "https://*.poe.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://poe.com/*", "https://*.poe.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [{
+    "resources": ["jszip.min.js"],
+    "matches": ["<all_urls>"]
+  }]
+} 
