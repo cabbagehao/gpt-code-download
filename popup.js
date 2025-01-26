@@ -457,10 +457,10 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
         }
       });
 
-      if (validBlocks.length === 0) {
-        console.log(`跳过第 ${pairIndex + 1} 个消息对：没有有效的代码块`);
-        return;
-      }
+      // if (validBlocks.length === 0) {
+      //   console.log(`跳过第 ${pairIndex + 1} 个消息对：没有有效的代码块`);
+      //   return;
+      // }
       console.log(`找到 ${validBlocks.length} 个有效代码块，开始处理...`);
 
       // 处理代码块，提取文件
@@ -588,9 +588,9 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     const fileCount = allFiles.size;
     console.log(`处理完成，共找到 ${fileCount} 个文件:`, Array.from(allFiles.keys()));
 
-    if (fileCount === 0) {
-      return { files: {}, questions: [], lastQuestion: null, error: '未找到任何代码文件' };
-    }
+    // if (fileCount === 0) {
+    //   return { files: {}, questions: [], lastQuestion: null, error: '未找到任何代码文件' };
+    // }
 
     // 返回时转换为对象，但保持顺序
     const orderedFiles = {};

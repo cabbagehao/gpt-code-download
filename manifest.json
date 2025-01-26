@@ -14,9 +14,6 @@
     "https://poe.com/*",
     "https://*.poe.com/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "action": {
     "default_popup": "popup.html"
   },
