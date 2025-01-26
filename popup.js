@@ -1,7 +1,7 @@
 console.log('popup.js 开始加载');
 
 // 定义所有需要用到的DOM选择器
-const SELECTORS = {
+const BASE_SELECTORS = {
   // 用于匹配代码块的选择器列表
   CODE_BLOCKS: [
     '[class*="MarkdownCodeBlock_preTag"]',      // Poe的代码块 MarkdownCodeBlock_container
@@ -79,6 +79,82 @@ const LANGUAGE_EXTENSIONS = {
   'env': 'env',                // 环境变量
   'graphql': 'graphql',        // GraphQL
   'text': 'txt',
+  'awk': 'awk',
+};
+
+// 添加网站特定的选择器配置
+const SITE_SELECTORS = {
+  'poe.com': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: [
+      '[class*="MarkdownCodeBlock_preTag"]'
+    ],
+    CODE_ACTIONS: '[class*="MarkdownCodeBlock_codeActions"]',
+    CODE_CONTAINER: '[class*="MarkdownCodeBlock_container"]',
+    HUMAN_MESSAGE: '[class*="Message_rightSideMessageBubble"]',
+    MESSAGE_CONTENT: '[class*="Message_messageTextContainer"]',
+    MESSAGE_PAIRS: '[class*="ChatMessagesView_messagePair"]'
+  },
+  
+  'claude.ai': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: ['pre code', '.code-block'],
+    CODE_ACTIONS: '.code-actions',
+    CODE_CONTAINER: '.prose',
+    HUMAN_MESSAGE: '.conversation-turn .p-4',
+    MESSAGE_CONTENT: '.contents',
+    MESSAGE_PAIRS: '.conversation-turn'
+  },
+  
+  'chatgpt.com': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: [
+      '.markdown.prose pre code',                // 代码块内容
+      '.hljs.language-python',                   // Python代码
+      '.overflow-y-auto.p-4 > code'             // 通用代码块
+    ],
+    CODE_ACTIONS: '.flex.items-center.rounded',  // 代码操作按钮
+    CODE_CONTAINER: '.contain-inline-size',      // 代码块容器
+    HUMAN_MESSAGE: '[data-message-author-role="user"]', // 用户消息
+    MESSAGE_CONTENT: '.whitespace-pre-wrap',     // 消息内容
+    MESSAGE_PAIRS: 'article[data-testid^="conversation-turn"]', // 消息对
+    LANGUAGE_NAME: '.flex.items-center.text-xs.font-sans.justify-between', // 语言标识
+    MESSAGE_RESPONSE: '.group\\/conversation-turn.agent-turn'  // AI回复容器
+  },
+  
+  'gemini.google.com': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: [
+      'code-block .code-container',  // 代码容器
+      'pre code'                     // 预格式化代码
+    ],
+    CODE_ACTIONS: '.code-block-decoration .buttons', // 代码块操作按钮
+    CODE_CONTAINER: '.code-block',                   // 代码块容器
+    HUMAN_MESSAGE: '.query-content',                 // 用户消息
+    MESSAGE_CONTENT: '.query-text',                  // 消息内容
+    MESSAGE_PAIRS: '.conversation-container',        // 消息对
+    LANGUAGE_NAME: '.code-block-decoration span'     // 语言标识
+  },
+  
+  'copilot.microsoft.com': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: ['pre code', '.code-block'],
+    CODE_ACTIONS: '.code-actions',
+    CODE_CONTAINER: '.codeblock',
+    HUMAN_MESSAGE: '.user-message-group',
+    MESSAGE_CONTENT: '.message-content',
+    MESSAGE_PAIRS: '.message-group'
+  },
+  
+  'mistral.ai': {
+    ...BASE_SELECTORS,
+    CODE_BLOCKS: ['pre code', '.code-block'],
+    CODE_ACTIONS: '.code-actions',
+    CODE_CONTAINER: '.code-container',
+    HUMAN_MESSAGE: '.message.user',
+    MESSAGE_CONTENT: '.content',
+    MESSAGE_PAIRS: '.message'
+  }
 };
 
 // 需要在文件开头添加
@@ -126,6 +202,58 @@ function initializeUI({ onScan }) {
 }
 
 /**
+ * 获取当前网站的选择器配置
+ * @param {string} url - 当前网站URL
+ * @returns {Object} 选择器配置
+ */
+function getSiteSelectors(url) {
+  if (!url) {
+    console.log('getSiteSelectors: url参数为空');
+    return BASE_SELECTORS;
+  }
+  
+  const hostname = new URL(url).hostname.toLowerCase();
+  console.log(`getSiteSelectors: 当前页面域名: ${hostname}`);
+  
+  // 精确匹配完整域名
+  if (SITE_SELECTORS[hostname]) {
+    console.log(`getSiteSelectors: ✓ 找到精确匹配的网站配置: ${hostname}`);
+    return SITE_SELECTORS[hostname];
+  }
+  console.log(`getSiteSelectors: ✗ 未找到精确匹配,尝试部分匹配...`);
+  
+  // 部分匹配域名
+  const siteKey = Object.keys(SITE_SELECTORS).find(key => {
+    // 处理子域名情况
+    const hostParts = hostname.split('.');
+    const keyParts = key.split('.');
+    
+    // 从后向前匹配域名部分
+    if (keyParts.length > hostParts.length) {
+      console.log(`  跳过 ${key}: 配置域名部分(${keyParts.length})多于当前域名(${hostParts.length})`);
+      return false;
+    }
+    
+    for (let i = 1; i <= keyParts.length; i++) {
+      if (hostParts[hostParts.length - i] !== keyParts[keyParts.length - i]) {
+        console.log(`  跳过 ${key}: 域名部分不匹配 [${hostParts[hostParts.length - i]} ≠ ${keyParts[keyParts.length - i]}]`);
+        return false;
+      }
+    }
+    console.log(`  匹配成功: ${key}`);
+    return true;
+  });
+  
+  if (siteKey) {
+    console.log(`✓ 找到部分匹配的网站配置: ${siteKey}, 当前域名: ${hostname}`);
+    return SITE_SELECTORS[siteKey];
+  }
+  
+  console.log(`✗ 未找到任何匹配的网站配置,使用基础配置。当前域名: ${hostname}`);
+  return BASE_SELECTORS;
+}
+
+/**
  * 扫描当前页面中的代码文件
  * @param {Function} updateUICallback - UI更新回调函数
  */
@@ -133,14 +261,17 @@ async function scanFiles(updateUICallback) {
   showLoading();
   updateLastScanTime();
   
-  // 获取当前活动标签页
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  console.log('当前标签页:', tab); // 添加日志
   
-  // 在页面中执行代码提取脚本
+  // 获取当前网站的选择器配置
+  const siteSelectors = getSiteSelectors(tab.url);
+  console.log('获取到的选择器配置:', siteSelectors); // 添加日志
+  
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
     function: extractCode,
-    args: [SELECTORS, LANGUAGE_EXTENSIONS]  // 传递两个参数
+    args: [siteSelectors, LANGUAGE_EXTENSIONS]
   }, (results) => handleExtractResult(results, updateUICallback));
 }
 
@@ -186,6 +317,29 @@ function handleExtractResult(results, updateUICallback) {
  * @returns {Object} 提取结果，包含文件和最后一个问题
  */
 function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
+  // 将 logSelectorMatches 移到这里作为内部函数
+  function logSelectorMatches() {
+    console.group('选择器匹配检查');
+    
+    // 检查消息对选择器
+    const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
+    console.log(`消息对选择器 "${SELECTORS.MESSAGE_PAIRS}" 匹配到 ${messagePairs.length} 个元素`);
+    
+    // 检查人类消息选择器
+    const humanMessages = document.querySelectorAll(SELECTORS.HUMAN_MESSAGE);
+    console.log(`人类消息选择器 "${SELECTORS.HUMAN_MESSAGE}" 匹配到 ${humanMessages.length} 个元素`);
+    
+    // 检查消息内容选择器
+    const messageContents = document.querySelectorAll(SELECTORS.MESSAGE_CONTENT);
+    console.log(`消息内容选择器 "${SELECTORS.MESSAGE_CONTENT}" 匹配到 ${messageContents.length} 个元素`);
+    
+    // 检查代码块选择器
+    const codeBlocks = document.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
+    console.log(`代码块选择器 "${SELECTORS.CODE_BLOCKS.join(', ')}" 匹配到 ${codeBlocks.length} 个元素`);
+    
+    console.groupEnd();
+  }
+
   /**
    * 从文本中提取指定扩展名的文件名
    * @param {string} text - 要搜索的文本
@@ -208,9 +362,9 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
 
   // 添加下载按钮到代码块
   function addDownloadButton(block, fileName, content) {
-    // 查找代码操作按钮容器
-    const actionsContainer = block.closest('[class*="MarkdownCodeBlock_container"]')
-      ?.querySelector('[class*="MarkdownCodeBlock_codeActions"]');
+    // 使用网站特定的选择器
+    const actionsContainer = block.closest(SELECTORS.CODE_CONTAINER)
+      ?.querySelector(SELECTORS.CODE_ACTIONS);
     
     if (!actionsContainer) {
       console.log('未找到代码操作按钮容器');
@@ -357,7 +511,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
       }
 
       if (!language) {
-        const langElement = block.closest('[class*="MarkdownCodeBlock_container"]')
+        const langElement = block.closest(SELECTORS.CODE_CONTAINER)
           ?.querySelector(SELECTORS.LANGUAGE_NAME);
         if (langElement) {
           language = langElement.textContent.trim().toLowerCase();
@@ -378,6 +532,9 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
   }
 
   try {
+    // 添加选择器匹配检查
+    logSelectorMatches();
+    
     // 设置观察器
     setupCodeBlockObserver();
 
@@ -385,65 +542,73 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     const existingBlocks = document.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
     existingBlocks.forEach(block => processCodeBlock(block));
 
-    const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
-    if (messagePairs.length === 0) {
-      console.error('错误: 未找到任何消息对');
-      return { files: {}, questions: [], error: '页面上没有消息' };
-    }
-    console.log('找到的消息对数量:', messagePairs.length);
-
-    // 先过滤出包含人类消息的消息对
-    const validPairs = Array.from(messagePairs).filter(pair => {
-      const hasHumanMessage = !!pair.querySelector(SELECTORS.HUMAN_MESSAGE);
-      if (!hasHumanMessage) {
-        console.log('跳过不包含人类消息的消息对');
-      }
-      return hasHumanMessage;
-    });
-
-    console.log('有效的消息对数量:', validPairs.length);
-
-    // 获取最后5个有效的消息对
-    const recentPairs = validPairs.slice(-5).reverse();
-    console.log('处理最后5个有效消息对');
-
     // 使用 Map 替代普通对象，以保证顺序
     const allFiles = new Map();
     const questions = new Set();
 
+    // 根据网站类型选择不同的处理逻辑
+    const hostname = window.location.hostname;
+    let pairs = [];
+
+    if (hostname.includes('chatgpt.com')) {
+      // ChatGPT特定的处理逻辑
+      const allTurns = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn"]'));
+      for (let i = 0; i < allTurns.length - 1; i++) {
+        const current = allTurns[i];
+        const next = allTurns[i + 1];
+        
+        const currentRole = current.querySelector('[data-message-author-role]')?.getAttribute('data-message-author-role');
+        const nextRole = next.querySelector('[data-message-author-role]')?.getAttribute('data-message-author-role');
+        
+        if (currentRole === 'user' && nextRole === 'assistant') {
+          pairs.push([current, next]);
+          i++; // 跳过已配对的AI回复
+        }
+      }
+    } else {
+      // 其他网站的通用处理逻辑
+      const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
+      pairs = Array.from(messagePairs).filter(pair => {
+        const humanMessage = pair.querySelector(SELECTORS.HUMAN_MESSAGE);
+        if (!humanMessage) return false;
+        
+        const content = humanMessage.querySelector(SELECTORS.MESSAGE_CONTENT);
+        if (!content) return false;
+        
+        return true;
+      }).map(pair => [pair, pair]); // 对于其他网站，问题和回答在同一个元素中
+    }
+
+    console.log(`找到 ${pairs.length} 个有效的问答对`);
+
     // 处理每个消息对
-    recentPairs.forEach((pair, pairIndex) => {
-      const humanMessage = pair.querySelector(SELECTORS.HUMAN_MESSAGE);
-      if (!humanMessage) {
-        console.log(`跳过第 ${pairIndex + 1} 个消息对：未找到人类消息`);
-        return;
-      }
+    pairs.forEach(([question, answer], pairIndex) => {
+      // 获取问题文本
+      const humanMessage = question.querySelector(SELECTORS.HUMAN_MESSAGE);
+      const contentElement = humanMessage?.querySelector(SELECTORS.MESSAGE_CONTENT);
+      const questionText = contentElement?.textContent.trim() || '';
 
-      const contentElement = humanMessage.querySelector(SELECTORS.MESSAGE_CONTENT);
-      if (!contentElement) {
-        console.log(`跳过第 ${pairIndex + 1} 个消息对：未找到消息内容元素`);
-        return;
+      if (questionText) {
+        questions.add(questionText);
       }
-
-      const question = contentElement.textContent.trim();
-      if (!question) {
-        console.log(`跳过第 ${pairIndex + 1} 个消息对：消息内容为空`);
-        return;
-      }
-
-      questions.add(question);
-      console.log(`处理第 ${pairIndex + 1} 个问题:`, question);
 
       // 获取代码块
-      const messageBlocks = pair.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
-      console.log(`在消息对中找到 ${messageBlocks.length} 个原始代码块`);
+      const container = hostname.includes('chatgpt.com') ? 
+        answer.querySelector(SELECTORS.MESSAGE_RESPONSE) : 
+        answer;
+
+      if (!container) return;
+
+      // 在容器中查找代码块
+      const messageBlocks = container.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
+      console.log(`在容器中找到 ${messageBlocks.length} 个代码块`);
 
       // 过滤掉嵌套的代码块
       const validBlocks = Array.from(messageBlocks).filter(block => {
         try {
           // 检查所有祖先元素是否包含代码块
           let parent = block.parentElement;
-          while (parent && parent !== pair) {
+          while (parent && parent !== container) {
             if (parent.matches(SELECTORS.CODE_BLOCKS.join(', '))) {
               console.log('跳过嵌套的代码块:', block.textContent?.substring(0, 20));
               return false;
@@ -457,17 +622,13 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
         }
       });
 
-      // if (validBlocks.length === 0) {
-      //   console.log(`跳过第 ${pairIndex + 1} 个消息对：没有有效的代码块`);
-      //   return;
-      // }
       console.log(`找到 ${validBlocks.length} 个有效代码块，开始处理...`);
 
       // 处理代码块，提取文件
       validBlocks.forEach((block, index) => {
         try {
           // 获取原始文本，保留空白字符
-          const codeText = block.innerText;
+          const codeText = block.textContent || block.innerText;
           if (!codeText?.trim()) {
             console.log(`跳过代码块 ${index}：内容为空`);
             return;
@@ -494,7 +655,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
 
           // 如果class中没找到，查找语言标识元素
           if (!language) {
-            const langElement = block.closest('[class*="MarkdownCodeBlock_container"]')
+            const langElement = block.closest(SELECTORS.CODE_CONTAINER)
               ?.querySelector(SELECTORS.LANGUAGE_NAME);
             if (langElement) {
               language = langElement.textContent.trim().toLowerCase();
@@ -521,7 +682,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
             console.log(`从第一行找到文件名: ${fileName}`);
           } else {
             // 3. 查找代码块所在的容器和相邻元素中的文件名
-            const containerDiv = block.closest('[class*="MarkdownCodeBlock_container"]');
+            const containerDiv = block.closest(SELECTORS.CODE_CONTAINER);
             if (containerDiv) {
               console.log('找到代码块容器:', containerDiv);
               const prevSibling = containerDiv.previousElementSibling;
@@ -570,7 +731,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
             // 使用 Map.set 添加文件
             allFiles.set(fileName, {
               content: codeText.trim(),
-              question: question,
+              question: questionText,
               order: pairIndex * 10 + index
             });
             console.log(`添加文件 ${fileName} 到全局列表，内容长度: ${codeText.length}，顺序: ${pairIndex * 10 + index}`);
@@ -587,10 +748,6 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     // 检查是否找到任何文件
     const fileCount = allFiles.size;
     console.log(`处理完成，共找到 ${fileCount} 个文件:`, Array.from(allFiles.keys()));
-
-    // if (fileCount === 0) {
-    //   return { files: {}, questions: [], lastQuestion: null, error: '未找到任何代码文件' };
-    // }
 
     // 返回时转换为对象，但保持顺序
     const orderedFiles = {};
@@ -641,9 +798,12 @@ function updateUI({ files, questions, lastQuestion }) {
     return;
   }
 
+  // 反转问题数组，让最新的问题显示在前面
+  const reversedQuestions = [...questions].reverse();
+  
   // 显示所有问题分组
-  console.log('显示所有问题分组:', questions);
-  questions.forEach(question => {
+  console.log('显示所有问题分组:', reversedQuestions);
+  reversedQuestions.forEach(question => {
     const questionGroup = createQuestionGroup(question, files);
     fileList.appendChild(questionGroup);
   });
@@ -664,7 +824,7 @@ function createQuestionGroup(question, files) {
 
   const group = document.createElement('div');
   group.className = 'question-group';
-  group.style.marginBottom = '20px';
+  group.style.marginBottom = '12px';
 
   const header = createGroupHeader(question);
   const filesContainer = createFilesContainer(files, question);
@@ -686,18 +846,26 @@ function createGroupHeader(question) {
     background-color: #f5f5f5;
     padding: 8px;
     border-radius: 4px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     font-weight: bold;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 2;        // 限制为2行
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.4;
-    max-height: 2.8em;
+    max-height: 2.8em;            // 2行的最大高度 (1.4em * 2)
+    cursor: help;                 // 鼠标悬停时显示问号光标
   `;
-  header.textContent = question;
-  header.title = question; // 鼠标悬停时显示完整问题
+  
+  // 截短文本,保留前100个字符
+  const shortQuestion = question.length > 100 ? 
+    question.substring(0, 100) + '...' : 
+    question;
+  
+  header.textContent = shortQuestion;
+  header.title = question;  // 鼠标悬停时显示完整问题
+  
   return header;
 }
 
@@ -711,26 +879,16 @@ function createFilesContainer(files, question) {
   console.log('创建文件容器 - 输入:', {
     filesType: files.constructor.name,
     filesSize: files.size,
-    question,
-    allFiles: Array.from(files.entries())
+    question
   });
 
   const container = document.createElement('div');
   container.className = 'question-files';
-  container.style.marginTop = '8px';
+  container.style.marginTop = '0';
 
   // 获取属于这个问题的文件
   const questionFiles = Array.from(files.entries())
-    .filter(([_, data]) => {
-      const matches = data.question === question;
-      console.log('检查文件匹配:', {
-        filePath: _,
-        fileQuestion: data.question,
-        currentQuestion: question,
-        matches
-      });
-      return matches;
-    })
+    .filter(([_, data]) => data.question === question)
     .map(([path, data]) => ({
       filePath: path,
       content: data.content,
@@ -739,14 +897,19 @@ function createFilesContainer(files, question) {
 
   console.log('过滤后的文件:', questionFiles);
 
-  // 如果没有文件，显示提示信息
+  // 如果没有文件，使用更紧凑的布局显示提示信息
   if (questionFiles.length === 0) {
     const emptyMessage = document.createElement('div');
     emptyMessage.className = 'empty-files';
     emptyMessage.style.cssText = `
       color: #666;
       font-style: italic;
-      padding: 8px;
+      padding: 2px 8px;
+      min-height: 20px;
+      line-height: 20px;
+      margin: 2px 0;
+      background-color: #f9f9f9;
+      border-radius: 2px;
     `;
     emptyMessage.textContent = '暂无相关代码文件';
     container.appendChild(emptyMessage);
@@ -773,9 +936,9 @@ function createFileItem(fileData) {
   item.style.cssText = `
     display: flex;
     align-items: center;
-    padding: 2px 8px;   // 减小上下内边距
+    padding: 8px;       // 保持原有内边距
     border-bottom: 1px solid #eee;
-    min-height: 32px;   // 设置最小高度确保对齐
+    min-height: 36px;   // 保持原有最小高度
   `;
 
   // 文件名
