@@ -10,11 +10,22 @@ const LANGUAGE_EXTENSIONS = {
 const SELECTORS = {
   CODE_BLOCKS: [
     '[class*="MarkdownCodeBlock_preTag"]',
+    'pre code',                    // Copilot 的代码块
+    '[data-testid="code-block"]'   // Copilot 的测试ID标记
   ],
+  CODE_ACTIONS: [
+    '[class*="MarkdownCodeBlock_codeActions"]',
+    '.flex.items-center.gap-3'     // Copilot 的操作按钮容器
+  ].join(', '),
+  CODE_CONTAINER: [
+    '[class*="MarkdownCodeBlock_container"]',
+    '.relative.text-sm'            // Copilot 的代码容器
+  ].join(', '),
   LANGUAGE_NAME: [
     '[class*="MarkdownCodeBlock_languageName"]',
     '[class*="language-"]',
-    '[class*="lang-"]'
+    '[class*="lang-"]',
+    'span.capitalize'              // Copilot 的语言标识
   ].join(', ')
 };
 

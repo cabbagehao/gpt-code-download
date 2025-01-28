@@ -1,0 +1,38 @@
+
+
+<!-- MESSAGE_PAIRS: 一个完整的对话对（包含人类问题和AI回答） -->
+<div class="ChatMessagesView_messagePair">  
+    
+    <!-- HUMAN_MESSAGE: 人类发送的消息容器 -->
+    <div class="Message_rightSideMessageBubble">
+        ...
+            这是人类发送的问题内容
+    </div>
+
+    <!-- AI的回复部分 -->
+    <div class="Message_leftSideMessageBubble">
+        <!-- CODE_CONTAINER: 整个代码块的容器 -->
+        <div class="MarkdownCodeBlock_container">
+            
+            <!-- 语言标识区域 -->
+            <div class="MarkdownCodeBlock_languageName">
+                javascript
+            </div>
+            
+            <!-- 操作按钮容器 -->
+            <div class="MarkdownCodeBlock_codeActions">
+                <button>复制</button>
+                <!-- 我们的下载按钮会被添加到这里 -->
+            </div>
+            
+            <!-- CODE_BLOCKS: 实际的代码内容区域 -->
+            <pre class="MarkdownCodeBlock_preTag">
+                <code>
+                    const example = "这里是代码内容";
+                </code>
+            </pre>
+            
+        </div>  
+    </div>
+    
+</div>

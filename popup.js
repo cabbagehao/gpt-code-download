@@ -32,6 +32,8 @@ const LANGUAGE_EXTENSIONS = {
   'javascript': 'js',
   'typescript': 'ts',
   'python': 'py',
+  'py': 'py',
+  'python3': 'py',
   'java': 'java',
   'c++': 'cpp',
   'cpp': 'cpp',
@@ -84,77 +86,128 @@ const LANGUAGE_EXTENSIONS = {
 
 // 添加网站特定的选择器配置
 const SITE_SELECTORS = {
-  'poe.com': {
+  'poe.com': {      // 消息对
     ...BASE_SELECTORS,
+    
+    // 消息相关选择器（按照 DOM 结构从上到下排列）
+    MESSAGE_PAIRS: '[class*="ChatMessagesView_messagePair"]',  // 消息对容器
+    HUMAN_MESSAGE: '[class*="Message_rightSideMessageBubble"]', // 用户消息
+    
+    // 代码块相关选择器
+    AI_MESSAGE: '[class*="Message_leftSideMessageBubble"]',     // AI消息
+    CODE_CONTAINER: '[class*="MarkdownCodeBlock_container"]',    // 代码块容器
+    LANGUAGE_NAME: '[class*="MarkdownCodeBlock_languageName"]',  // 语言类型标识
+    CODE_ACTIONS: '[class*="MarkdownCodeBlock_codeActions"]',    // 代码操作按钮， 复制按钮所在的大div
     CODE_BLOCKS: [
-      '[class*="MarkdownCodeBlock_preTag"]'
-    ],
-    CODE_ACTIONS: '[class*="MarkdownCodeBlock_codeActions"]',
-    CODE_CONTAINER: '[class*="MarkdownCodeBlock_container"]',
-    HUMAN_MESSAGE: '[class*="Message_rightSideMessageBubble"]',
-    MESSAGE_CONTENT: '[class*="Message_messageTextContainer"]',
-    MESSAGE_PAIRS: '[class*="ChatMessagesView_messagePair"]'
+      '[class*="MarkdownCodeBlock_preTag"]'                      // 代码块
+    ]
+  },
+  
+  'gemini.google.com': {  //  消息对
+    ...BASE_SELECTORS,
+    
+    // 消息相关选择器
+    MESSAGE_PAIRS: '.conversation-container',          // 消息对容器
+    HUMAN_MESSAGE: '.user-query-container',             // 用户消息
+    
+    // 代码块相关选择器
+    AI_MESSAGE: '.response-container-content',                  // AI消息
+    CODE_CONTAINER: '.code-block',                    // 代码块容器
+    LANGUAGE_NAME: '.code-block-decoration span',     // 语言标识
+    CODE_ACTIONS: '.code-block-decoration .buttons',  // 代码操作按钮
+    CODE_BLOCKS: [
+      'code-block .code-container',                   // 代码容器
+      'pre code'                                      // 预格式化代码
+    ]
+  },
+  
+  'chatgpt.com': {  // 直接平铺
+    ...BASE_SELECTORS,
+    
+    // 消息相关选择器
+    MESSAGE_PAIRS: 'article[data-testid^="conversation-turn"]', // 消息对容器
+    HUMAN_MESSAGE: '[data-message-author-role="user"]',         // 用户消息
+
+    // 代码块相关选择器
+    AI_MESSAGE: '.group\\/conversation-turn.agent-turn',        // AI消息
+    CODE_CONTAINER: '.contain-inline-size',                     // 代码块容器
+    LANGUAGE_NAME: '.flex.items-center.text-xs.font-sans.justify-between', // 语言标识
+    CODE_ACTIONS: '.flex.items-center.rounded',                 // 代码操作按钮
+    CODE_BLOCKS: [
+      '.markdown.prose pre code',                               // 代码块内容
+      '.hljs.language-python',                                  // Python代码
+      '.overflow-y-auto.p-4 > code'                            // 通用代码块
+    ]
+  },
+  
+  'copilot.microsoft.com': {  // 分组，然后平铺
+    ...BASE_SELECTORS,
+    
+    // 消息相关选择器（按照 DOM 结构从上到下排列）
+    MESSAGE_PAIRS: '[data-content="conversation"] > div',  // 消息容器
+    HUMAN_MESSAGE: '[data-content="user-message"]',        // 用户消息
+    
+    // 代码块相关选择器
+    AI_MESSAGE: '[data-content="ai-message"]',             // AI消息
+    CODE_CONTAINER: '[data-testid="code-block-wrapper"]',  // 代码块容器
+    LANGUAGE_NAME: 'span.capitalize',                      // 语言类型标识
+    CODE_ACTIONS: 'button[class*="text-foreground-static-350"]', // 复制按钮
+    CODE_BLOCKS: [
+      'pre code',                                          // 基本代码块
+      '[data-testid="code-block"]'                        // 测试ID标记的代码块
+    ]
   },
   
   'claude.ai': {
     ...BASE_SELECTORS,
-    CODE_BLOCKS: ['pre code', '.code-block'],
-    CODE_ACTIONS: '.code-actions',
-    CODE_CONTAINER: '.prose',
-    HUMAN_MESSAGE: '.conversation-turn .p-4',
-    MESSAGE_CONTENT: '.contents',
-    MESSAGE_PAIRS: '.conversation-turn'
-  },
-  
-  'chatgpt.com': {
-    ...BASE_SELECTORS,
+    
+    // 消息相关选择器
+    MESSAGE_PAIRS: '.conversation-turn',                // 消息对容器
+    HUMAN_MESSAGE: '.conversation-turn .p-4',          // 用户消息
+    
+    // 代码块相关选择器
+    AI_MESSAGE: '.assistant-message',                  // AI消息
+    CODE_CONTAINER: '.prose',                          // 代码块容器
+    LANGUAGE_NAME: '.language-identifier',             // 语言类型标识
+    CODE_ACTIONS: '.code-actions',                     // 代码操作按钮
     CODE_BLOCKS: [
-      '.markdown.prose pre code',                // 代码块内容
-      '.hljs.language-python',                   // Python代码
-      '.overflow-y-auto.p-4 > code'             // 通用代码块
-    ],
-    CODE_ACTIONS: '.flex.items-center.rounded',  // 代码操作按钮
-    CODE_CONTAINER: '.contain-inline-size',      // 代码块容器
-    HUMAN_MESSAGE: '[data-message-author-role="user"]', // 用户消息
-    MESSAGE_CONTENT: '.whitespace-pre-wrap',     // 消息内容
-    MESSAGE_PAIRS: 'article[data-testid^="conversation-turn"]', // 消息对
-    LANGUAGE_NAME: '.flex.items-center.text-xs.font-sans.justify-between', // 语言标识
-    MESSAGE_RESPONSE: '.group\\/conversation-turn.agent-turn'  // AI回复容器
+      'pre code',                                      // 基本代码块
+      '.code-block'                                    // 代码块
+    ]
   },
   
-  'gemini.google.com': {
+  'mistral.ai': {   // 直接平铺
     ...BASE_SELECTORS,
+    
+    // 消息相关选择器
+    MESSAGE_PAIRS: '.message',                        // 消息对容器
+    HUMAN_MESSAGE: '.message.user',                   // 用户消息
+    
+    // 代码块相关选择器
+    AI_MESSAGE: '.message.assistant',                 // AI消息
+    CODE_CONTAINER: '.code-container',                // 代码块容器
+    LANGUAGE_NAME: '.language-label',                 // 语言标识
+    CODE_ACTIONS: '.code-actions',                    // 代码操作按钮
     CODE_BLOCKS: [
-      'code-block .code-container',  // 代码容器
-      'pre code'                     // 预格式化代码
-    ],
-    CODE_ACTIONS: '.code-block-decoration .buttons', // 代码块操作按钮
-    CODE_CONTAINER: '.code-block',                   // 代码块容器
-    HUMAN_MESSAGE: '.query-content',                 // 用户消息
-    MESSAGE_CONTENT: '.query-text',                  // 消息内容
-    MESSAGE_PAIRS: '.conversation-container',        // 消息对
-    LANGUAGE_NAME: '.code-block-decoration span'     // 语言标识
+      'pre code',                                     // 基本代码块
+      '.code-block'                                   // 代码块
+    ]
   },
-  
-  'copilot.microsoft.com': {
+  'yiyan.baidu.com': {  // 直接平铺、倒序
     ...BASE_SELECTORS,
-    CODE_BLOCKS: ['pre code', '.code-block'],
-    CODE_ACTIONS: '.code-actions',
-    CODE_CONTAINER: '.codeblock',
-    HUMAN_MESSAGE: '.user-message-group',
-    MESSAGE_CONTENT: '.message-content',
-    MESSAGE_PAIRS: '.message-group'
   },
-  
-  'mistral.ai': {
+  'deepseek.com': {  // 直接平铺
     ...BASE_SELECTORS,
-    CODE_BLOCKS: ['pre code', '.code-block'],
-    CODE_ACTIONS: '.code-actions',
-    CODE_CONTAINER: '.code-container',
-    HUMAN_MESSAGE: '.message.user',
-    MESSAGE_CONTENT: '.content',
-    MESSAGE_PAIRS: '.message'
-  }
+  },
+  'www.doubao.com': {  // 直接平铺
+    ...BASE_SELECTORS,
+  },
+  'www.xinghuo.xfyun.cn': {  // 平铺、倒序
+    ...BASE_SELECTORS,
+  },
+  'tongyi.aliyun.com': {  // 直接平铺 
+    ...BASE_SELECTORS,
+  },
 };
 
 // 需要在文件开头添加
@@ -317,224 +370,272 @@ function handleExtractResult(results, updateUICallback) {
  * @returns {Object} 提取结果，包含文件和最后一个问题
  */
 function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
-  // 将 logSelectorMatches 移到这里作为内部函数
-  function logSelectorMatches() {
-    console.group('选择器匹配检查');
+  try {
+    console.log('选择器匹配检查');
     
     // 检查消息对选择器
     const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
-    console.log(`消息对选择器 "${SELECTORS.MESSAGE_PAIRS}" 匹配到 ${messagePairs.length} 个元素`);
+    console.log('消息对选择器', `"${SELECTORS.MESSAGE_PAIRS}"`, '匹配到', messagePairs.length, '个元素');
     
     // 检查人类消息选择器
     const humanMessages = document.querySelectorAll(SELECTORS.HUMAN_MESSAGE);
-    console.log(`人类消息选择器 "${SELECTORS.HUMAN_MESSAGE}" 匹配到 ${humanMessages.length} 个元素`);
+    console.log('人类消息选择器', `"${SELECTORS.HUMAN_MESSAGE}"`, '匹配到', humanMessages.length, '个元素');
     
     // 检查消息内容选择器
     const messageContents = document.querySelectorAll(SELECTORS.MESSAGE_CONTENT);
-    console.log(`消息内容选择器 "${SELECTORS.MESSAGE_CONTENT}" 匹配到 ${messageContents.length} 个元素`);
+    console.log('消息内容选择器', `"${SELECTORS.MESSAGE_CONTENT}"`, '匹配到', messageContents.length, '个元素');
     
     // 检查代码块选择器
     const codeBlocks = document.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
-    console.log(`代码块选择器 "${SELECTORS.CODE_BLOCKS.join(', ')}" 匹配到 ${codeBlocks.length} 个元素`);
+    console.log('代码块选择器', `"${SELECTORS.CODE_BLOCKS.join(', ')}"`, '匹配到', codeBlocks.length, '个元素');
     
-    console.groupEnd();
-  }
-
-  /**
-   * 从文本中提取指定扩展名的文件名
-   * @param {string} text - 要搜索的文本
-   * @param {string} extension - 文件扩展名（不含点号）
-   * @returns {string|null} 找到的文件名，未找到返回null
-   */
-  function extractFileName(text, extension) {
-    // 匹配包含指定扩展名的文件名
-    // 文件名可以包含字母、数字、下划线、横线、点号和斜杠
-    // 扩展名前必须有点号，且必须完全匹配
-    const strictPattern = new RegExp(`([\\w-]+\\.${extension})(?=[^\\w/./-]|$)`, 'i');
-    const match = text.match(strictPattern);
-    console.log('提取文件名:', {
-      text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-      extension,
-      match
-    });
-    return match ? match[1] : null;
-  }
-
-  // 添加下载按钮到代码块
-  function addDownloadButton(block, fileName, content) {
-    // 使用网站特定的选择器
-    const actionsContainer = block.closest(SELECTORS.CODE_CONTAINER)
-      ?.querySelector(SELECTORS.CODE_ACTIONS);
+    // 检查代码语言选择器
+    const languageElements = document.querySelectorAll(SELECTORS.LANGUAGE_NAME);
+    console.log('代码语言选择器', `"${SELECTORS.LANGUAGE_NAME}"`, '匹配到', languageElements.length, '个元素');
+    if (languageElements.length > 0) {
+      console.log('代码语言:', Array.from(languageElements).map(el => el.textContent.trim()));
+    }
     
-    if (!actionsContainer) {
-      console.log('未找到代码操作按钮容器');
-      return;
+    // 检查代码操作按钮容器选择器
+    const actionContainers = document.querySelectorAll(SELECTORS.CODE_ACTIONS);
+    console.log('代码操作按钮容器选择器', `"${SELECTORS.CODE_ACTIONS}"`, '匹配到', actionContainers.length, '个元素');
+    if (actionContainers.length > 0) {
+      console.log('操作按钮:', Array.from(actionContainers).map(el => {
+        const buttons = el.matches('button') ? [el] : el.querySelectorAll('button');
+        return Array.from(buttons).map(btn => btn.textContent.trim());
+      }));
     }
 
-    // 检查是否已经添加过下载按钮
-    if (actionsContainer.querySelector('.code-download-btn')) {
-      console.log('该代码块已有下载按钮');
-      return;
+    /**
+     * 从文本中提取指定扩展名的文件名
+     * @param {string} text - 要搜索的文本
+     * @param {string} extension - 文件扩展名（不含点号）
+     * @returns {string|null} 找到的文件名，未找到返回null
+     */
+    function extractFileName(text, extension) {
+      // 匹配包含指定扩展名的文件名
+      // 文件名可以包含字母、数字、下划线、横线、点号和斜杠
+      // 扩展名前必须有点号，且必须完全匹配
+      const strictPattern = new RegExp(`([\\w-]+\\.${extension})(?=[^\\w/./-]|$)`, 'i');
+      const match = text.match(strictPattern);
+      console.log('提取文件名:', {
+        text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+        extension,
+        match
+      });
+      return match ? match[1] : null;
     }
 
-    // 创建下载按钮
-    const downloadBtn = document.createElement('button');
-    downloadBtn.className = 'code-download-btn';
-    downloadBtn.textContent = '下载';
+    // 添加下载按钮到代码块
+    function addDownloadButton(block, fileName, content) {
+      const hostname = window.location.hostname;
+      let actionsContainer;
+      
+      if (hostname === 'copilot.microsoft.com') {
+        // 对于 Copilot，先找到代码块容器
+        const wrapper = block.closest('[data-testid="code-block-wrapper"]');
+        if (!wrapper) {
+          console.log('未找到代码块容器');
+          return;
+        }
+        
+        // 找到复制按钮
+        const copyButton = wrapper.querySelector('button[class*="text-foreground-static-350"]');
+        if (!copyButton) {
+          console.log('未找到复制按钮');
+          return;
+        }
+        
+        // 使用复制按钮的父元素作为容器
+        actionsContainer = copyButton.parentElement;
+        console.log('找到操作按钮容器:', actionsContainer);
+      } else {
+        // 其他网站的查找逻辑保持不变
+        actionsContainer = block.closest(SELECTORS.CODE_CONTAINER)
+          ?.querySelector(SELECTORS.CODE_ACTIONS);
+      }
+      
+      if (!actionsContainer) {
+        console.log('未找到代码操作按钮容器');
+        return;
+      }
 
-    // 获取原生复制按钮，用于复制样式
-    const copyButton = actionsContainer.querySelector('button');
-    
-    if (copyButton) {
-      // 如果找到了原生按钮，复制其样式
-      console.log('找到原生按钮，复制其样式');
-      const copyButtonStyles = window.getComputedStyle(copyButton);
-      downloadBtn.style.cssText = `
-        background: ${copyButtonStyles.background};
-        border: ${copyButtonStyles.border};
-        padding: ${copyButtonStyles.padding};
-        margin: ${copyButtonStyles.margin};
-        font: ${copyButtonStyles.font};
-        color: ${copyButtonStyles.color};
-        cursor: pointer;
-        opacity: 1;
-        transition: opacity 0.2s;
-      `;
+      // 检查是否已经添加过下载按钮
+      if (actionsContainer.querySelector('.code-download-btn')) {
+        console.log('该代码块已有下载按钮');
+        return;
+      }
 
-      // 添加悬停效果
-      downloadBtn.addEventListener('mouseover', () => {
-        downloadBtn.style.opacity = '1';
-      });
-      downloadBtn.addEventListener('mouseout', () => {
-        downloadBtn.style.opacity = '0.6';
-      });
-    } else {
-      // 如果没找到原生按钮，使用默认样式（与popup页面一致）
-      console.log('未找到原生按钮，使用默认样式');
-      downloadBtn.style.cssText = `
-        margin-left: 8px;
-        padding: 4px 12px;
-        border: none;
-        border-radius: 4px;
-        background-color: #4CAF50;
-        color: white;
-        cursor: pointer;
-        font-size: 13px;
-        line-height: 1.4;
-      `;
+      // 创建下载按钮
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'code-download-btn';
+      downloadBtn.textContent = '下载';
 
-      // 添加悬停效果
-      downloadBtn.addEventListener('mouseover', () => {
-        downloadBtn.style.backgroundColor = '#45a049';
+      // 获取原生复制按钮，用于复制样式
+      const copyButton = actionsContainer.matches('button') ? actionsContainer : actionsContainer.querySelector('button');
+      
+      if (copyButton) {
+        // 如果找到了原生按钮，复制其样式
+        console.log('找到原生按钮，复制其样式');
+        const copyButtonStyles = window.getComputedStyle(copyButton);
+        downloadBtn.style.cssText = `
+          background: ${copyButtonStyles.background};
+          border: ${copyButtonStyles.border};
+          padding: ${copyButtonStyles.padding};
+          margin: ${copyButtonStyles.margin};
+          font: ${copyButtonStyles.font};
+          color: ${copyButtonStyles.color};
+          cursor: pointer;
+          opacity: 1;
+          transition: opacity 0.2s;
+        `;
+
+        // 添加悬停效果
+        downloadBtn.addEventListener('mouseover', () => {
+          downloadBtn.style.opacity = '1';
+        });
+        downloadBtn.addEventListener('mouseout', () => {
+          downloadBtn.style.opacity = '0.6';
+        });
+      } else {
+        // 如果没找到原生按钮，使用默认样式（与popup页面一致）
+        console.log('未找到原生按钮，使用默认样式');
+        downloadBtn.style.cssText = `
+          margin-left: 8px;
+          padding: 4px 12px;
+          border: none;
+          border-radius: 4px;
+          background-color: #4CAF50;
+          color: white;
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 1.4;
+        `;
+
+        // 添加悬停效果
+        downloadBtn.addEventListener('mouseover', () => {
+          downloadBtn.style.backgroundColor = '#45a049';
+        });
+        downloadBtn.addEventListener('mouseout', () => {
+          downloadBtn.style.backgroundColor = '#4CAF50';
+        });
+      }
+
+      downloadBtn.title = '下载';
+
+      // 添加点击事件
+      downloadBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       });
-      downloadBtn.addEventListener('mouseout', () => {
-        downloadBtn.style.backgroundColor = '#4CAF50';
-      });
+
+      // 添加到操作按钮容器
+      actionsContainer.appendChild(downloadBtn);
+      console.log('添加下载按钮到代码块:', fileName);
     }
 
-    downloadBtn.title = '下载';
-
-    // 添加点击事件
-    downloadBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const blob = new Blob([content], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-
-    // 添加到操作按钮容器
-    actionsContainer.appendChild(downloadBtn);
-    console.log('添加下载按钮到代码块:', fileName);
-  }
-
-  // 添加自动监听代码块的功能
-  function setupCodeBlockObserver() {
-    // 创建观察器实例
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(mutation => {
-        // 检查新增的节点
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // 元素节点
-            // 检查新增节点中的代码块
-            const codeBlocks = node.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
-            codeBlocks.forEach(block => processCodeBlock(block));
-            
-            // 如果新增节点本身就是代码块
-            if (node.matches(SELECTORS.CODE_BLOCKS.join(', '))) {
-              processCodeBlock(node);
+    // 添加自动监听代码块的功能
+    function setupCodeBlockObserver() {
+      // 创建观察器实例
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach(mutation => {
+          // 检查新增的节点
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === 1) { // 元素节点
+              // 检查新增节点中的代码块
+              const codeBlocks = node.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
+              codeBlocks.forEach(block => processCodeBlock(block));
+              
+              // 如果新增节点本身就是代码块
+              if (node.matches(SELECTORS.CODE_BLOCKS.join(', '))) {
+                processCodeBlock(node);
+              }
             }
-          }
+          });
         });
       });
-    });
 
-    // 配置观察选项
-    const config = {
-      childList: true,    // 观察子节点变化
-      subtree: true,      // 观察所有后代节点
-    };
+      // 配置观察选项
+      const config = {
+        childList: true,    // 观察子节点变化
+        subtree: true,      // 观察所有后代节点
+      };
 
-    // 开始观察整个文档
-    observer.observe(document.body, config);
-    console.log('代码块观察器已设置');
-  }
-
-  // 处理单个代码块
-  function processCodeBlock(block) {
-    try {
-      // 检查是否已经处理过
-      if (block.dataset.processed) {
-        return;
-      }
-
-      const codeText = block.innerText;
-      if (!codeText?.trim()) {
-        return;
-      }
-
-      // 获取语言和文件扩展名
-      let language = null;
-      const blockClasses = Array.from(block.classList || []);
-      for (const cls of blockClasses) {
-        const langMatch = cls.match(/(?:language|lang)-(\w+)/);
-        if (langMatch) {
-          language = langMatch[1].toLowerCase();
-          break;
-        }
-      }
-
-      if (!language) {
-        const langElement = block.closest(SELECTORS.CODE_CONTAINER)
-          ?.querySelector(SELECTORS.LANGUAGE_NAME);
-        if (langElement) {
-          language = langElement.textContent.trim().toLowerCase();
-        }
-      }
-
-      const fileExtension = LANGUAGE_EXTENSIONS[language] || 'txt';
-      const fileName = `code_${Date.now()}.${fileExtension}`;
-
-      // 添加下载按钮
-      addDownloadButton(block, fileName, codeText.trim());
-
-      // 标记为已处理
-      block.dataset.processed = 'true';
-    } catch (e) {
-      console.error('处理代码块时出错:', e);
+      // 开始观察整个文档
+      observer.observe(document.body, config);
+      console.log('代码块观察器已设置');
     }
-  }
 
-  try {
-    // 添加选择器匹配检查
-    logSelectorMatches();
-    
+    // 处理单个代码块
+    function processCodeBlock(block) {
+      try {
+        // 检查是否已经处理过
+        if (block.dataset.processed) {
+          return;
+        }
+
+        const codeText = block.innerText;
+        if (!codeText?.trim()) {
+          return;
+        }
+
+        // 获取语言和文件扩展名
+        let language = null;
+        
+        if (window.location.hostname === 'copilot.microsoft.com') {
+          // 对于 Copilot，直接从 capitalize span 获取语言
+          const wrapper = block.closest('[data-testid="code-block-wrapper"]');
+          if (wrapper) {
+            const langElement = wrapper.querySelector('span.capitalize');
+            if (langElement) {
+              language = langElement.textContent.trim().toLowerCase();
+              console.log('从 Copilot 找到语言:', language);
+            }
+          }
+        } else {
+          // 其他网站的语言识别逻辑保持不变
+          const blockClasses = Array.from(block.classList || []);
+          for (const cls of blockClasses) {
+            const langMatch = cls.match(/(?:language|lang)-(\w+)/);
+            if (langMatch) {
+              language = langMatch[1].toLowerCase();
+              break;
+            }
+          }
+
+          if (!language) {
+            const langElement = block.closest(SELECTORS.CODE_CONTAINER)
+              ?.querySelector(SELECTORS.LANGUAGE_NAME);
+            if (langElement) {
+              language = langElement.textContent.trim().toLowerCase();
+            }
+          }
+        }
+
+        console.log('最终识别的语言:', language);
+        const fileExtension = LANGUAGE_EXTENSIONS[language] || 'txt';
+        console.log('使用文件扩展名:', fileExtension);
+        const fileName = `code_${Date.now()}.${fileExtension}`;
+
+        // 添加下载按钮
+        addDownloadButton(block, fileName, codeText.trim());
+
+        // 标记为已处理
+        block.dataset.processed = 'true';
+      } catch (e) {
+        console.error('处理代码块时出错:', e);
+      }
+    }
+
     // 设置观察器
     setupCodeBlockObserver();
 
@@ -550,7 +651,43 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     const hostname = window.location.hostname;
     let pairs = [];
 
-    if (hostname.includes('chatgpt.com')) {
+    if (hostname === 'copilot.microsoft.com') {
+      // Copilot 特定的处理逻辑
+      const conversationContainer = document.querySelector('[data-content="conversation"]');
+      if (!conversationContainer) {
+        console.log('未找到对话容器');
+        return { files: {}, questions: [], lastQuestion: null };
+      }
+
+      // 获取所有消息
+      const messages = Array.from(conversationContainer.children);
+      console.log('找到消息元素:', messages.length);
+      
+      // 按照时间顺序对消息对进行分组
+      pairs = [];
+      let currentUserMessage = null;
+      
+      messages.forEach(message => {
+        const userMessage = message.querySelector(SELECTORS.HUMAN_MESSAGE);
+        const aiMessage = message.querySelector(SELECTORS.AI_MESSAGE);
+        
+        if (userMessage) {
+          currentUserMessage = userMessage;
+          const text = userMessage.textContent.trim();
+          console.log('找到用户消息:', { text: text.substring(0, 50) });
+          // 直接添加到问题集合
+          questions.add(text);
+        }
+        
+        if (aiMessage && currentUserMessage) {
+          console.log('找到对应的 AI 回复');
+          pairs.push([currentUserMessage, aiMessage]);
+          currentUserMessage = null; // 重置当前用户消息
+        }
+      });
+
+      console.log(`处理完成，找到 ${pairs.length} 对问答，${questions.size} 个问题`);
+    } else if (hostname.includes('chatgpt.com')) {
       // ChatGPT特定的处理逻辑
       const allTurns = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn"]'));
       for (let i = 0; i < allTurns.length - 1; i++) {
@@ -584,33 +721,32 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     // 处理每个消息对
     pairs.forEach(([question, answer], pairIndex) => {
       // 获取问题文本
-      const humanMessage = question.querySelector(SELECTORS.HUMAN_MESSAGE);
-      const contentElement = humanMessage?.querySelector(SELECTORS.MESSAGE_CONTENT);
-      const questionText = contentElement?.textContent.trim() || '';
-
+      const questionText = question.textContent.trim();
       if (questionText) {
         questions.add(questionText);
+        console.log('添加问题:', questionText.substring(0, 50));
       }
 
       // 获取代码块
+      let blocks;
       const container = hostname.includes('chatgpt.com') ? 
         answer.querySelector(SELECTORS.MESSAGE_RESPONSE) : 
         answer;
 
       if (!container) return;
+      blocks = Array.from(container.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', ')));
 
-      // 在容器中查找代码块
-      const messageBlocks = container.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
-      console.log(`在容器中找到 ${messageBlocks.length} 个代码块`);
+      console.log(`在消息对中找到 ${blocks.length} 个代码块`);
 
       // 过滤掉嵌套的代码块
-      const validBlocks = Array.from(messageBlocks).filter(block => {
+      const validBlocks = Array.from(blocks).filter(block => {
         try {
           // 检查所有祖先元素是否包含代码块
           let parent = block.parentElement;
+          const container = answer;
           while (parent && parent !== container) {
-            if (parent.matches(SELECTORS.CODE_BLOCKS.join(', '))) {
-              console.log('跳过嵌套的代码块:', block.textContent?.substring(0, 20));
+            if (parent.matches('pre code, code, [data-testid="code-block"]')) {
+              console.log('跳过嵌套的代码块');
               return false;
             }
             parent = parent.parentElement;
@@ -726,19 +862,16 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
             }
           }
 
-          // 添加到全局文件列表
-          if (codeText) {
-            // 使用 Map.set 添加文件
-            allFiles.set(fileName, {
-              content: codeText.trim(),
-              question: questionText,
-              order: pairIndex * 10 + index
-            });
-            console.log(`添加文件 ${fileName} 到全局列表，内容长度: ${codeText.length}，顺序: ${pairIndex * 10 + index}`);
+          // 使用 Map.set 添加文件
+          allFiles.set(fileName, {
+            content: codeText.trim(),
+            question: questionText,
+            order: pairIndex * 10 + index
+          });
+          console.log(`添加文件 ${fileName} 到全局列表，内容长度: ${codeText.length}，顺序: ${pairIndex * 10 + index}`);
 
-            // 添加下载按钮到代码块
-            addDownloadButton(block, fileName, codeText.trim());
-          }
+          // 添加下载按钮到代码块
+          addDownloadButton(block, fileName, codeText.trim());
         } catch (e) {
           console.error(`处理代码块 ${index} 时出错:`, e);
         }
