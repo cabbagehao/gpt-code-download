@@ -1,31 +1,5 @@
 console.log('popup.js 开始加载');
 
-// 定义所有需要用到的DOM选择器
-const BASE_SELECTORS = {
-  // 用于匹配代码块的选择器列表
-  CODE_BLOCKS: [
-    '[class*="MarkdownCodeBlock_preTag"]',      // Poe的代码块 MarkdownCodeBlock_container
-  ],
-  // 用于匹配人类消息的选择器（合并为一个选择器字符串）
-  HUMAN_MESSAGE: [
-    '[class*="Message_rightSideMessageBubble"]', // 右侧消息气泡
-    '[class*="human-message"]',                  // 人类消息标识
-    '[class*="human"]'                          // 通用人类标识
-  ].join(', '),
-  // 用于匹配消息内容的选择器
-  MESSAGE_CONTENT: [
-    '[class*="Message_messageTextContainer"]',   // 消息文本容器
-    '[class*="message-content"]',               // 消息内容
-    '[class*="content"]'                        // 通用内容容器
-  ].join(', '),
-  // 用于匹配消息对（一问一答）的选择器
-  MESSAGE_PAIRS: '[class*="ChatMessagesView_messagePair"], [class*="chat-message"]',
-  LANGUAGE_NAME: [
-    '[class*="MarkdownCodeBlock_languageName"]',  // Claude的语言标识
-    '[class*="language-"]',                       // 通用语言标识
-    '[class*="lang-"]'                           // 另一种语言标识
-  ].join(', ')
-};
 
 // 添加语言到文件扩展名的映射
 const LANGUAGE_EXTENSIONS = {
@@ -86,29 +60,32 @@ const LANGUAGE_EXTENSIONS = {
 
 // 添加网站特定的选择器配置
 const SITE_SELECTORS = {
-  'poe.com': {      // 消息对
-    ...BASE_SELECTORS,
-    
+  'poe.com': {      // 消息对形式
     // 消息相关选择器（按照 DOM 结构从上到下排列）
+    MESSAGE_STYLE: 'pairs',  // 标记为消息对形式
     MESSAGE_PAIRS: '[class*="ChatMessagesView_messagePair"]',  // 消息对容器
-    HUMAN_MESSAGE: '[class*="Message_rightSideMessageBubble"]', // 用户消息
+
+    // 用户消息
+    HUMAN_MESSAGE: '[class*="Message_rightSideMessageBubble"]', 
     
     // 代码块相关选择器
     AI_MESSAGE: '[class*="Message_leftSideMessageBubble"]',     // AI消息
     CODE_CONTAINER: '[class*="MarkdownCodeBlock_container"]',    // 代码块容器
     LANGUAGE_NAME: '[class*="MarkdownCodeBlock_languageName"]',  // 语言类型标识
-    CODE_ACTIONS: '[class*="MarkdownCodeBlock_codeActions"]',    // 代码操作按钮， 复制按钮所在的大div
+    CODE_ACTIONS: '[class*="MarkdownCodeBlock_codeActions"]',    // 代码操作按钮
     CODE_BLOCKS: [
       '[class*="MarkdownCodeBlock_preTag"]'                      // 代码块
     ]
   },
   
   'gemini.google.com': {  //  消息对
-    ...BASE_SELECTORS,
     
     // 消息相关选择器
+    MESSAGE_STYLE: 'pairs',  // 标记为消息对形式
     MESSAGE_PAIRS: '.conversation-container',          // 消息对容器
-    HUMAN_MESSAGE: '.user-query-container',             // 用户消息
+
+    // 用户消息
+    HUMAN_MESSAGE: '.user-query-container',             
     
     // 代码块相关选择器
     AI_MESSAGE: '.response-container-content',                  // AI消息
@@ -121,15 +98,16 @@ const SITE_SELECTORS = {
     ]
   },
   
-  'chatgpt.com': {  // 直接平铺
-    ...BASE_SELECTORS,
+  'chatgpt.com': {  // 平铺
     
     // 消息相关选择器
-    MESSAGE_PAIRS: 'article[data-testid^="conversation-turn"]', // 消息对容器
-    HUMAN_MESSAGE: '[data-message-author-role="user"]',         // 用户消息
+    MESSAGES_LIST: 'article[class]',     // 匹配带有class和dir属性的article元素
 
+    // 用户消息
+    HUMAN_MESSAGE: 'div[data-message-author-role="user"]',
+    
     // 代码块相关选择器
-    AI_MESSAGE: '.group\\/conversation-turn.agent-turn',        // AI消息
+    AI_MESSAGE: '[data-message-author-role="assistant"]',        // AI消息
     CODE_CONTAINER: '.contain-inline-size',                     // 代码块容器
     LANGUAGE_NAME: '.flex.items-center.text-xs.font-sans.justify-between', // 语言标识
     CODE_ACTIONS: '.flex.items-center.rounded',                 // 代码操作按钮
@@ -141,10 +119,10 @@ const SITE_SELECTORS = {
   },
   
   'copilot.microsoft.com': {  // 分组，然后平铺
-    ...BASE_SELECTORS,
     
     // 消息相关选择器（按照 DOM 结构从上到下排列）
-    MESSAGE_PAIRS: '[data-content="conversation"] > div',  // 消息容器
+    MESSAGES_LIST: '[role="article"]',
+
     HUMAN_MESSAGE: '[data-content="user-message"]',        // 用户消息
     
     // 代码块相关选择器
@@ -158,15 +136,15 @@ const SITE_SELECTORS = {
     ]
   },
   
-  'claude.ai': {
-    ...BASE_SELECTORS,
+  'claude.ai': {  // 平铺
     
     // 消息相关选择器
-    MESSAGE_PAIRS: '.conversation-turn',                // 消息对容器
-    HUMAN_MESSAGE: '.conversation-turn .p-4',          // 用户消息
+    MESSAGES_LIST: 'div[data-test-render-count]',
+
+    HUMAN_MESSAGE: 'div.font-user-message',          // 用户消息
     
     // 代码块相关选择器
-    AI_MESSAGE: '.assistant-message',                  // AI消息
+    AI_MESSAGE: '.font-claude-message',                  // AI消息
     CODE_CONTAINER: '.prose',                          // 代码块容器
     LANGUAGE_NAME: '.language-identifier',             // 语言类型标识
     CODE_ACTIONS: '.code-actions',                     // 代码操作按钮
@@ -176,37 +154,33 @@ const SITE_SELECTORS = {
     ]
   },
   
-  'mistral.ai': {   // 直接平铺
-    ...BASE_SELECTORS,
+  'mistral.ai': {  // 平铺形式
     
     // 消息相关选择器
-    MESSAGE_PAIRS: '.message',                        // 消息对容器
-    HUMAN_MESSAGE: '.message.user',                   // 用户消息
+    MESSAGES_LIST: 'div[class*="group"][class*="gap-3"]',  // 消息列表容器
+    
+    // 用户消息
+    HUMAN_MESSAGE: 'div.prose.prose-neutral',  // 用户消息内容
     
     // 代码块相关选择器
-    AI_MESSAGE: '.message.assistant',                 // AI消息
-    CODE_CONTAINER: '.code-container',                // 代码块容器
-    LANGUAGE_NAME: '.language-label',                 // 语言标识
-    CODE_ACTIONS: '.code-actions',                    // 代码操作按钮
+    AI_MESSAGE: 'div.prose.prose-neutral',  // AI消息内容
+    CODE_CONTAINER: 'pre div.rounded-md',  // 代码块容器
+    LANGUAGE_NAME: 'span.language-identifier',  // 语言标识
+    CODE_ACTIONS: 'button[aria-label="Copy code to clipboard"]',  // 复制按钮
     CODE_BLOCKS: [
-      'pre code',                                     // 基本代码块
-      '.code-block'                                   // 代码块
+      'pre code',  // 代码块
+      'div.rounded-md code'  // 带圆角的代码块
     ]
   },
   'yiyan.baidu.com': {  // 直接平铺、倒序
-    ...BASE_SELECTORS,
   },
   'deepseek.com': {  // 直接平铺
-    ...BASE_SELECTORS,
   },
   'www.doubao.com': {  // 直接平铺
-    ...BASE_SELECTORS,
   },
   'www.xinghuo.xfyun.cn': {  // 平铺、倒序
-    ...BASE_SELECTORS,
   },
   'tongyi.aliyun.com': {  // 直接平铺 
-    ...BASE_SELECTORS,
   },
 };
 
@@ -262,7 +236,7 @@ function initializeUI({ onScan }) {
 function getSiteSelectors(url) {
   if (!url) {
     console.log('getSiteSelectors: url参数为空');
-    return BASE_SELECTORS;
+    return ;
   }
   
   const hostname = new URL(url).hostname.toLowerCase();
@@ -303,7 +277,7 @@ function getSiteSelectors(url) {
   }
   
   console.log(`✗ 未找到任何匹配的网站配置,使用基础配置。当前域名: ${hostname}`);
-  return BASE_SELECTORS;
+  return ;
 }
 
 /**
@@ -370,20 +344,83 @@ function handleExtractResult(results, updateUICallback) {
  * @returns {Object} 提取结果，包含文件和最后一个问题
  */
 function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
+  // 在函数开始处获取 hostname
+  const hostname = window.location.hostname;
+  console.log('当前网站:', hostname);
+
+  /**
+   * 根据消息组织形式获取问答对
+   * @param {Object} SELECTORS - 选择器配置
+   * @returns {Array} 问答对数组
+   */
+  function getPairs(SELECTORS) {
+    const pairs = [];
+    
+    if (SELECTORS.MESSAGE_STYLE === 'pairs') {
+      // 消息对形式处理
+      const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
+      console.log('消息对选择器', `"${SELECTORS.MESSAGE_PAIRS}"`, '匹配到', messagePairs.length, '个元素');
+      messagePairs.forEach(pair => {
+        const humanMessage = pair.querySelector(SELECTORS.HUMAN_MESSAGE);
+        const aiMessage = pair.querySelector(SELECTORS.AI_MESSAGE);
+        if (humanMessage && aiMessage) {
+          pairs.push([humanMessage, aiMessage]);
+        }
+      });
+    } else {
+      // 平铺形式处理 - 直接获取所有消息
+      const messages = document.querySelectorAll(SELECTORS.MESSAGES_LIST);
+      console.log('消息列表选择器', `"${SELECTORS.MESSAGES_LIST}"`, '匹配到', messages.length, '个元素');
+      
+      // 遍历所有消息
+      for (let i = 0; i < messages.length - 1; i++) {
+        const current = messages[i];
+        
+        // 检查当前消息或其子元素是否匹配人类消息选择器
+        let humanMessage = current.matches(SELECTORS.HUMAN_MESSAGE) ? 
+                          current : 
+                          current.querySelector(SELECTORS.HUMAN_MESSAGE);
+        
+        if (!humanMessage) {
+          console.log('当前消息不是人类消息, skip');
+          continue;
+        }
+        
+        const next = messages[i + 1];
+        // 检查下一个消息或其子元素是否匹配AI消息选择器
+        const isAIMessage = next.matches(SELECTORS.AI_MESSAGE) || 
+                           next.querySelector(SELECTORS.AI_MESSAGE);
+        
+        if (isAIMessage) {
+          pairs.push([humanMessage, next]);  // 使用精确匹配的人类消息，但保持原始的AI消息容器
+          i++; // 跳过已配对的AI消息
+        } else {
+          console.log('当前消息不是AI消息, skip');
+        }
+      }
+    }
+    
+    console.log(`找到 ${pairs.length} 个问答对`);
+    return pairs;
+  }
+
   try {
-    console.log('选择器匹配检查');
+    console.group('选择器匹配检查');
     
     // 检查消息对选择器
-    const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
-    console.log('消息对选择器', `"${SELECTORS.MESSAGE_PAIRS}"`, '匹配到', messagePairs.length, '个元素');
+    if (SELECTORS.MESSAGE_PAIRS) {
+      const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
+      console.log('消息对选择器', `"${SELECTORS.MESSAGE_PAIRS}"`, '匹配到', messagePairs.length, '个元素');
+    }
     
+    if (SELECTORS.MESSAGES_LIST) {
+      const messages = document.querySelectorAll(SELECTORS.MESSAGES_LIST);
+      console.log('消息列表选择器', `"${SELECTORS.MESSAGES_LIST}"`, '匹配到', messages.length, '个元素');
+    }
+
     // 检查人类消息选择器
     const humanMessages = document.querySelectorAll(SELECTORS.HUMAN_MESSAGE);
     console.log('人类消息选择器', `"${SELECTORS.HUMAN_MESSAGE}"`, '匹配到', humanMessages.length, '个元素');
-    
-    // 检查消息内容选择器
-    const messageContents = document.querySelectorAll(SELECTORS.MESSAGE_CONTENT);
-    console.log('消息内容选择器', `"${SELECTORS.MESSAGE_CONTENT}"`, '匹配到', messageContents.length, '个元素');
     
     // 检查代码块选择器
     const codeBlocks = document.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', '));
@@ -404,6 +441,8 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
         const buttons = el.matches('button') ? [el] : el.querySelectorAll('button');
         return Array.from(buttons).map(btn => btn.textContent.trim());
       }));
+    
+    console.groupEnd();
     }
 
     /**
@@ -427,7 +466,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     }
 
     // 添加下载按钮到代码块
-    function addDownloadButton(block, fileName, content) {
+    function addDownloadButton(block, filename, content) {
       const hostname = window.location.hostname;
       let actionsContainer;
       
@@ -451,12 +490,12 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
         console.log('找到操作按钮容器:', actionsContainer);
       } else {
         // 其他网站的查找逻辑保持不变
-        actionsContainer = block.closest(SELECTORS.CODE_CONTAINER)
-          ?.querySelector(SELECTORS.CODE_ACTIONS);
+        const actionButton = block.querySelector(SELECTORS.CODE_ACTIONS);
+        actionsContainer = actionButton?.matches('button') ? actionButton.parentElement : actionButton;
       }
       
       if (!actionsContainer) {
-        console.log('未找到代码操作按钮容器');
+        console.log('未找到代码操作按钮容器',block, SELECTORS.CODE_ACTIONS);
         return;
       }
 
@@ -531,7 +570,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -540,7 +579,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
 
       // 添加到操作按钮容器
       actionsContainer.appendChild(downloadBtn);
-      console.log('添加下载按钮到代码块:', fileName);
+      console.log('添加下载按钮到代码块:', filename);
     }
 
     // 添加自动监听代码块的功能
@@ -647,78 +686,11 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
     const allFiles = new Map();
     const questions = new Set();
 
-    // 根据网站类型选择不同的处理逻辑
-    const hostname = window.location.hostname;
-    let pairs = [];
-
-    if (hostname === 'copilot.microsoft.com') {
-      // Copilot 特定的处理逻辑
-      const conversationContainer = document.querySelector('[data-content="conversation"]');
-      if (!conversationContainer) {
-        console.log('未找到对话容器');
-        return { files: {}, questions: [], lastQuestion: null };
-      }
-
-      // 获取所有消息
-      const messages = Array.from(conversationContainer.children);
-      console.log('找到消息元素:', messages.length);
-      
-      // 按照时间顺序对消息对进行分组
-      pairs = [];
-      let currentUserMessage = null;
-      
-      messages.forEach(message => {
-        const userMessage = message.querySelector(SELECTORS.HUMAN_MESSAGE);
-        const aiMessage = message.querySelector(SELECTORS.AI_MESSAGE);
-        
-        if (userMessage) {
-          currentUserMessage = userMessage;
-          const text = userMessage.textContent.trim();
-          console.log('找到用户消息:', { text: text.substring(0, 50) });
-          // 直接添加到问题集合
-          questions.add(text);
-        }
-        
-        if (aiMessage && currentUserMessage) {
-          console.log('找到对应的 AI 回复');
-          pairs.push([currentUserMessage, aiMessage]);
-          currentUserMessage = null; // 重置当前用户消息
-        }
-      });
-
-      console.log(`处理完成，找到 ${pairs.length} 对问答，${questions.size} 个问题`);
-    } else if (hostname.includes('chatgpt.com')) {
-      // ChatGPT特定的处理逻辑
-      const allTurns = Array.from(document.querySelectorAll('article[data-testid^="conversation-turn"]'));
-      for (let i = 0; i < allTurns.length - 1; i++) {
-        const current = allTurns[i];
-        const next = allTurns[i + 1];
-        
-        const currentRole = current.querySelector('[data-message-author-role]')?.getAttribute('data-message-author-role');
-        const nextRole = next.querySelector('[data-message-author-role]')?.getAttribute('data-message-author-role');
-        
-        if (currentRole === 'user' && nextRole === 'assistant') {
-          pairs.push([current, next]);
-          i++; // 跳过已配对的AI回复
-        }
-      }
-    } else {
-      // 其他网站的通用处理逻辑
-      const messagePairs = document.querySelectorAll(SELECTORS.MESSAGE_PAIRS);
-      pairs = Array.from(messagePairs).filter(pair => {
-        const humanMessage = pair.querySelector(SELECTORS.HUMAN_MESSAGE);
-        if (!humanMessage) return false;
-        
-        const content = humanMessage.querySelector(SELECTORS.MESSAGE_CONTENT);
-        if (!content) return false;
-        
-        return true;
-      }).map(pair => [pair, pair]); // 对于其他网站，问题和回答在同一个元素中
-    }
-
+    // 获取问答对
+    const pairs = getPairs(SELECTORS);
     console.log(`找到 ${pairs.length} 个有效的问答对`);
 
-    // 处理每个消息对
+    // 处理每个问答对
     pairs.forEach(([question, answer], pairIndex) => {
       // 获取问题文本
       const questionText = question.textContent.trim();
@@ -728,13 +700,7 @@ function extractCode(SELECTORS, LANGUAGE_EXTENSIONS) {
       }
 
       // 获取代码块
-      let blocks;
-      const container = hostname.includes('chatgpt.com') ? 
-        answer.querySelector(SELECTORS.MESSAGE_RESPONSE) : 
-        answer;
-
-      if (!container) return;
-      blocks = Array.from(container.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', ')));
+      let blocks = Array.from(answer.querySelectorAll(SELECTORS.CODE_BLOCKS.join(', ')));
 
       console.log(`在消息对中找到 ${blocks.length} 个代码块`);
 
